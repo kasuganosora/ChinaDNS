@@ -119,22 +119,23 @@ Advanced
 --------
 
     usage: chinadns [-h] [-l IPLIST_FILE] [-b BIND_ADDR] [-p BIND_PORT]
-           [-c CHNROUTE_FILE] [-s DNS] [-v]
+           [-c CHNROUTE_FILE] [-s DNS] [-m] [-v] [-V]
     Forward DNS requests.
 
-    -h, --help            show this help message and exit
     -l IPLIST_FILE        path to ip blacklist file
     -c CHNROUTE_FILE      path to china route file
                           if not specified, CHNRoute will be turned off
     -d                    enable bi-directional CHNRoute filter
     -y                    delay time for suspects, default: 0.3
-    -b BIND_ADDR          address that listens, default: 127.0.0.1
+    -b BIND_ADDR          address that listens, default: 0.0.0.0
     -p BIND_PORT          port that listens, default: 53
     -s DNS                DNS servers to use, default:
-                          114.114.114.114,208.67.222.222:443,8.8.8.8
-    -m                    Using DNS compression pointer mutation
-                          (backlist and delaying would be disabled)
+                          114.114.114.114,223.5.5.5,8.8.8.8,8.8.4.4,
+                          208.67.222.222:443,208.67.222.222:5353
+    -m                    use DNS compression pointer mutation
+                          (blacklist and delaying would be disabled)
     -v                    verbose logging
+    -V                    print version and exit
 
 About chnroute
 --------------

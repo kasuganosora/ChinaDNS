@@ -7,7 +7,7 @@ static void local_ns_setsection(ns_msg *msg, ns_sect sect);
 static int local_ns_skiprr(const unsigned char *ptr, const unsigned char *eom, ns_sect section, int count);
 static int local_ns_dn_skipname(const unsigned char *ptr, const unsigned char *eom);
 static int local_ns_name_skip(const unsigned char **ptrptr, const unsigned char *eom);
-static int local_ns_labellen(const unsigned char *lp);
+static int local_ns_labellen(const unsigned char *lp, const unsigned char *eom);
 #define LOCAL_NS_TYPE_ELT 0x40 /*%< EDNS0 extended label type */
 #define LOCAL_DNS_LABELTYPE_BITSTRING 0x41
 #ifdef __UCLIBC__
@@ -156,15 +156,23 @@ static int local_ns_skiprr(const unsigned char *ptr, const unsigned char *eom, n
 			errno = EMSGSIZE;
 			return -1;
 		}
+		if (ptr > eom || (size_t)(eom - ptr) < (size_t)b + NS_INT16SZ + NS_INT16SZ) {
+			errno = EMSGSIZE;
+			return -1;
+		}
 		ptr += b/*Name*/ + NS_INT16SZ/*Type*/ + NS_INT16SZ/*Class*/;
 		if (section != ns_s_qd) {
-			if (ptr + NS_INT32SZ + NS_INT16SZ > eom) {
+			if ((size_t)(eom - ptr) < NS_INT32SZ + NS_INT16SZ) {
 				errno = EMSGSIZE;
 				return -1;
 			}
 
 			ptr += NS_INT32SZ/*TTL*/;
 			NS_GET16(rdlength, ptr);
+			if ((size_t)(eom - ptr) < (size_t)rdlength) {
+				errno = EMSGSIZE;
+				return -1;
+			}
 			ptr += rdlength/*RData*/;
 		}
 	}
@@ -196,16 +204,28 @@ static int local_ns_name_skip(const unsigned char **ptrptr, const unsigned char 
 		/* Check for indirection. */
 		switch (n & NS_CMPRSFLGS) {
 			case 0: /*%< normal case, n == len */
+				if ((size_t)(eom - cp) < n) {
+					errno = EMSGSIZE;
+					return -1;
+				}
 				cp += n;
 				continue;
 			case LOCAL_NS_TYPE_ELT: /*%< EDNS0 extended label */
-				if ((l = local_ns_labellen(cp - 1)) < 0) {
+				if ((l = local_ns_labellen(cp - 1, eom)) < 0) {
 					errno = EMSGSIZE; /*%< XXX */
+					return -1;
+				}
+				if ((size_t)(eom - cp) < (size_t)l) {
+					errno = EMSGSIZE;
 					return -1;
 				}
 				cp += l;
 				continue;
 			case NS_CMPRSFLGS:      /*%< indirection */
+				if (cp >= eom) {
+					errno = EMSGSIZE;
+					return -1;
+				}
 				cp++;
 				break;
 			default: /*%< illegal type */
@@ -225,10 +245,14 @@ static int local_ns_name_skip(const unsigned char **ptrptr, const unsigned char 
 
 	return 0;
 }
-static int local_ns_labellen(const unsigned char *lp)
+static int local_ns_labellen(const unsigned char *lp, const unsigned char *eom)
 {
 	int bitlen;
-	unsigned char l = *lp;
+	unsigned char l;
+
+	if (lp == NULL || lp >= eom)
+		return -1;
+	l = *lp;
 
 	if ((l & NS_CMPRSFLGS) == NS_CMPRSFLGS) {
 		/* should be avoided by the caller */
@@ -237,6 +261,8 @@ static int local_ns_labellen(const unsigned char *lp)
 
 	if ((l & NS_CMPRSFLGS) == LOCAL_NS_TYPE_ELT) {
 		if (l == LOCAL_DNS_LABELTYPE_BITSTRING) {
+			if (lp + 1 >= eom)
+				return -1;
 			if ((bitlen = *(lp + 1)) == 0)
 				bitlen = 256;
 			return ((bitlen + 7 ) / 8 + 1);

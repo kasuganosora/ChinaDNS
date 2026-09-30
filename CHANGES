@@ -1,3 +1,12 @@
+Unreleased
+- Fix CHNRoute lookup missing the highest prefix and overlapping prefixes
+- Fix prefix lengths /0 and /1
+- Keep a delayed answer from going out after an accepted one
+- Keep one refreshed delay from blocking other answers
+- Ignore empty fields in the DNS server list
+- Reject malformed names instead of crashing, including DNS id 0
+- Bound the compression-pointer mutation so it stays inside the buffer
+
 1.3.2 2015-08-05
 - Fix compatibility issues
 

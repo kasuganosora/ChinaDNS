@@ -29,6 +29,7 @@ run_test ./autogen.sh
 run_test ./configure --enable-debug
 make clean
 run_test make
+run_test tests/run_unit.sh
 
 run_test src/chinadns -h
 run_test src/chinadns -V

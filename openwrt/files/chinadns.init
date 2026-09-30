@@ -25,9 +25,11 @@ start()
 
 stop()
 {
-    iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5353
-    kill `cat $PIDFILE`
-    rm $PIDFILE
+    iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5353 || true
+    if [ -f "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        rm -f "$PIDFILE"
+    fi
 }
 
 restart()
